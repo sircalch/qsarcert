@@ -1,0 +1,25 @@
+{
+  "title": "QSARCert: An Open-Source Toolkit for OECD Validation Principles, Applicability Domain Assessment, Y-Randomization, and Reproducibility Certification of QSAR and Molecular Machine Learning Models",
+  "description": "An open-source scientific toolkit for rigorous quality assurance, OECD Validation Principles compliance, Applicability Domain evaluation (Hat matrix leverage h* and Williams Plot), Tropsha-Golbraikh statistical metrics, Y-randomization (cR^2_p), and scaffold data leakage detection for QSAR, QSPR, and molecular machine learning models.",
+  "creators": [
+    {
+      "name": "Monreal-Hernández, Andre",
+      "affiliation": "Doctoral Research Group"
+    }
+  ],
+  "access_right": "open",
+  "license": "MIT",
+  "keywords": [
+    "qsar",
+    "qspr",
+    "molecular machine learning",
+    "applicability domain",
+    "williams plot",
+    "y-randomization",
+    "oecd validation",
+    "tropsha",
+    "cheminformatics",
+    "reproducibility"
+  ],
+  "upload_type": "software"
+}

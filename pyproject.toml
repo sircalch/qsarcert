@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qsarcert"
+version = "1.0.0"
+description = "Automated OECD Validation Principles, Applicability Domain (Williams Plot), Y-Randomization, and Scaffold Leakage Certification for QSAR & Molecular ML Models"
+readme = "README.md"
+authors = [
+    { name = "Andre Monreal-Hernández", email = "amonreal@example.com" }
+]
+license = { text = "MIT" }
+keywords = [
+    "qsar",
+    "qspr",
+    "molecular-machine-learning",
+    "applicability-domain",
+    "williams-plot",
+    "y-randomization",
+    "tropsha-metrics",
+    "oecd-principles",
+    "cheminformatics",
+    "drug-discovery",
+    "model-validation",
+    "conformal-prediction",
+    "reproducibility"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent"
+]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.20.0",
+    "scipy>=1.7.0",
+    "pandas>=1.3.0",
+    "scikit-learn>=1.0.0",
+    "matplotlib>=3.5.0",
+    "jinja2>=3.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "build>=0.10.0",
+    "twine>=4.0.0"
+]
+
+[project.scripts]
+qsarcert = "qsarcert.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/amonreal/qsarcert"
+Documentation = "https://github.com/amonreal/qsarcert#readme"
+Repository = "https://github.com/amonreal/qsarcert.git"
+"Bug Tracker" = "https://github.com/amonreal/qsarcert/issues"
+Changelog = "https://github.com/amonreal/qsarcert/blob/main/CHANGELOG.md"

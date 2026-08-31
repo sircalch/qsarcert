@@ -1,0 +1,11 @@
+Parameter,Value,Status
+Target Endpoint / Algorithm,pIC50 (Kinase Inhibition) (Random Forest Regressor (100 trees)),PASS
+Evaluated Samples,25 compounds,PASS
+Coefficient of Determination (R^2),0.983,PASS
+Predictive Squared Correlation (Q^2_ext),0.983,PASS
+Concordance Correlation (CCC),0.992,PASS
+Regression Slope (k / k'),0.970 / 1.014,PASS
+Modified Roy Metric (r_m^2 avg),0.952 (delta: 0.001),PASS
+Applicability Domain (Williams Plot),96.0% in-domain (h* = 0.270),PASS
+Y-Randomization (cR^2_p),cR^2_p = 0.795 (Scrambled R^2 = 0.340),WARNING
+Train/Test Data Leakage Check,0 duplicates (Mean NN sim: 0.758),PASS
