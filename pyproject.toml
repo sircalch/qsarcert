@@ -69,3 +69,7 @@ Documentation = "https://github.com/amonreal/qsarcert#readme"
 Repository = "https://github.com/amonreal/qsarcert.git"
 "Bug Tracker" = "https://github.com/amonreal/qsarcert/issues"
 Changelog = "https://github.com/amonreal/qsarcert/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+include = ["qsarcert*"]
+
