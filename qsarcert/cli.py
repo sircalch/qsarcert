@@ -1,4 +1,4 @@
-"""
+﻿"""
 Command Line Interface (CLI) for QSARCert.
 """
 
@@ -191,11 +191,11 @@ def print_citation():
   year = {2026},
   version = {1.0.0},
   publisher = {Zenodo},
-  url = {https://github.com/amonreal/qsarcert}
+  url = {https://github.com/sircalch/qsarcert}
 }"""
     print("\nIf you use QSARCert in your publications, please cite:\n")
     print("APA Style:")
-    print("Monreal-Hernández, A. (2026). QSARCert: An Open-Source Toolkit for OECD Validation Principles, Applicability Domain Assessment, Y-Randomization, and Reproducibility Certification of QSAR and Molecular Machine Learning Models (v1.0.0). Zenodo. https://github.com/amonreal/qsarcert\n")
+    print("Monreal-Hernández, A. (2026). QSARCert: An Open-Source Toolkit for OECD Validation Principles, Applicability Domain Assessment, Y-Randomization, and Reproducibility Certification of QSAR and Molecular Machine Learning Models (v1.0.0). Zenodo. https://github.com/sircalch/qsarcert\n")
     print("BibTeX:")
     print(bib)
     print()
@@ -250,3 +250,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

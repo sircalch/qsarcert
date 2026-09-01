@@ -1,4 +1,4 @@
-cff-version: 1.2.0
+﻿cff-version: 1.2.0
 message: "If you use QSARCert in your research to validate QSAR or molecular machine learning models, compute applicability domains, or perform OECD compliance checks, please cite it as below."
 authors:
   - family-names: "Monreal-Hernández"
@@ -7,8 +7,8 @@ authors:
 title: "QSARCert: An Open-Source Toolkit for OECD Validation Principles, Applicability Domain Assessment, Y-Randomization, and Reproducibility Certification of QSAR and Molecular Machine Learning Models"
 version: 1.0.0
 date-released: 2026-08-31
-url: "https://github.com/amonreal/qsarcert"
-repository-code: "https://github.com/amonreal/qsarcert"
+url: "https://github.com/sircalch/qsarcert"
+repository-code: "https://github.com/sircalch/qsarcert"
 keywords:
   - "qsar"
   - "qspr"
@@ -20,3 +20,4 @@ keywords:
   - "oecd principles"
   - "reproducibility"
 license: MIT
+

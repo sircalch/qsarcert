@@ -1,4 +1,4 @@
-[build-system]
+﻿[build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -64,12 +64,13 @@ dev = [
 qsarcert = "qsarcert.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/amonreal/qsarcert"
-Documentation = "https://github.com/amonreal/qsarcert#readme"
-Repository = "https://github.com/amonreal/qsarcert.git"
-"Bug Tracker" = "https://github.com/amonreal/qsarcert/issues"
-Changelog = "https://github.com/amonreal/qsarcert/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/sircalch/qsarcert"
+Documentation = "https://github.com/sircalch/qsarcert#readme"
+Repository = "https://github.com/sircalch/qsarcert.git"
+"Bug Tracker" = "https://github.com/sircalch/qsarcert/issues"
+Changelog = "https://github.com/sircalch/qsarcert/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 include = ["qsarcert*"]
+
 

@@ -1,6 +1,6 @@
-# QSARCert
+﻿# QSARCert
 
-[![CI](https://github.com/amonreal/qsarcert/actions/workflows/test.yml/badge.svg)](https://github.com/amonreal/qsarcert/actions)
+[![CI](https://github.com/sircalch/qsarcert/actions/workflows/test.yml/badge.svg)](https://github.com/sircalch/qsarcert/actions)
 [![PyPI version](https://img.shields.io/pypi/v/qsarcert.svg?color=blue)](https://pypi.org/project/qsarcert/)
 [![Python versions](https://img.shields.io/pypi/pyversions/qsarcert.svg)](https://pypi.org/project/qsarcert/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -72,7 +72,7 @@ pip install qsarcert
 
 ### From Source
 ```bash
-git clone https://github.com/amonreal/qsarcert.git
+git clone https://github.com/sircalch/qsarcert.git
 cd qsarcert
 pip install -e .[dev]
 ```
@@ -139,7 +139,7 @@ If you use QSARCert in your research, please cite:
   year = {2026},
   version = {1.0.0},
   publisher = {Zenodo},
-  url = {https://github.com/amonreal/qsarcert}
+  url = {https://github.com/sircalch/qsarcert}
 }
 ```
 
@@ -148,3 +148,4 @@ If you use QSARCert in your research, please cite:
 ## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
