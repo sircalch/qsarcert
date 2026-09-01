@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "Automated OECD Validation Principles, Applicability Domain (Williams Plot), Y-Randomization, and Scaffold Leakage Certification for QSAR & Molecular ML Models"
 readme = "README.md"
 authors = [
-    { name = "Andre Monreal-Hernández", email = "amonreal@example.com" }
+    { name = "Andres Monreal-Hernández", email = "amonreal@example.com" }
 ]
 license = { text = "MIT" }
 keywords = [

@@ -1,9 +1,9 @@
-﻿cff-version: 1.2.0
+cff-version: 1.2.0
 message: "If you use QSARCert in your research to validate QSAR or molecular machine learning models, compute applicability domains, or perform OECD compliance checks, please cite it as below."
 authors:
   - family-names: "Monreal-Hernández"
-    given-names: "Andre"
-    orcid: "https://orcid.org/0000-0000-0000-0000"
+    given-names: "Andres"
+    orcid: "https://orcid.org/0009-0009-1207-8597"
 title: "QSARCert: An Open-Source Toolkit for OECD Validation Principles, Applicability Domain Assessment, Y-Randomization, and Reproducibility Certification of QSAR and Molecular Machine Learning Models"
 version: 1.0.0
 date-released: 2026-08-31
