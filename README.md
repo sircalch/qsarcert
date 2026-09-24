@@ -66,8 +66,10 @@ In computational drug discovery, cheminformatics, and regulatory toxicology (REA
 ## Installation
 
 ### From PyPI
+> **Note:** PyPI release pending. Until then, install from the tagged GitHub release:
+
 ```bash
-pip install qsarcert
+pip install "git+https://github.com/sircalch/qsarcert@v1.0.0"
 ```
 
 ### From Source
