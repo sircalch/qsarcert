@@ -41,7 +41,7 @@ def run_demo(output_dir: str = "qsarcert_demo_output"):
     os.makedirs(output_dir, exist_ok=True)
 
     metadata = {
-        "endpoint": "pIC50 (Kinase Inhibition)",
+        "endpoint": "SYNTHETIC DEMO DATA - pIC50 (Kinase Inhibition)",
         "algorithm": "Random Forest Regressor (100 trees)",
         "descriptors": "RDKit 2D PhysChem Descriptors (p=8)"
     }
