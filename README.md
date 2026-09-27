@@ -4,7 +4,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/qsarcert.svg?color=blue)](https://pypi.org/project/qsarcert/)
 [![Python versions](https://img.shields.io/pypi/pyversions/qsarcert.svg)](https://pypi.org/project/qsarcert/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1234580.svg)](https://doi.org/10.5281/zenodo.1234580)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22217582.svg)](https://doi.org/10.5281/zenodo.22217582)
 
 > **Automated OECD Validation Principles, Applicability Domain (Williams Plot), Y-Randomization, and Scaffold Leakage Certification for QSAR & Molecular ML Models.**
 
