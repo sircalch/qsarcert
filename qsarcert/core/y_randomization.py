@@ -37,7 +37,8 @@ def perform_y_randomization(
     y_true : np.ndarray
         True observed response vector.
     original_r2 : float
-        The R^2 of the true unpermuted model.
+        Kept for backward compatibility and ignored: the reference R^2 is recomputed with the
+        same ridge surrogate used on the permuted responses, so that cR^2_p compares like with like.
     n_iterations : int, default 100
     random_seed : int, default 42
 
@@ -56,6 +57,17 @@ def perform_y_randomization(
     x_aug = np.hstack([np.ones((n, 1)), x])
     xtx = x_aug.T @ x_aug + 1e-3 * np.eye(p + 1)
     inv_xtx = np.linalg.pinv(xtx)
+
+    def _fit_r2(y_vec):
+        w = inv_xtx @ (x_aug.T @ y_vec)
+        res = np.sum((y_vec - x_aug @ w) ** 2)
+        tot = np.sum((y_vec - np.mean(y_vec)) ** 2)
+        return float(1.0 - res / tot) if tot > 0 else 0.0
+
+    # cR^2_p compares the SAME modelling procedure on original and permuted responses
+    # (Todeschini). The reference R^2 is therefore that of the linear surrogate fitted to the
+    # unpermuted data, not the external R^2 of the user's model, which is reported separately.
+    original_r2 = _fit_r2(y)
 
     for _ in range(n_iterations):
         y_perm = rng.permutation(y)

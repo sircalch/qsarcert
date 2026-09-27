@@ -10,11 +10,12 @@ import numpy as np
 @dataclass
 class OECDValidationResult:
     n_samples: int
-    r2: float  # Coefficient of determination
+    r2: float  # Coefficient of determination of the evaluation set, 1 - SS_res/SS_tot
+    r2_pearson: float  # Squared Pearson correlation r^2 (used by Golbraikh-Tropsha and Roy r_m^2)
     q2_ext: float  # Predictive squared correlation (R^2_pred)
     q2_f1: float
     q2_f2: float
-    q2_f3: float
+    q2_f3: float  # NaN unless the training set is given (needs the training variance)
     ccc: float  # Concordance Correlation Coefficient
     mae: float
     rmse: float
@@ -22,12 +23,13 @@ class OECDValidationResult:
     k_prime_slope: float  # Slope of regression through origin y_pred vs y (0.85 <= k' <= 1.15)
     r0_2: float
     r0_prime_2: float
-    tropsha_r2_diff: float  # |R^2 - R0^2| / R^2 (< 0.1)
-    tropsha_r2_prime_diff: float  # |R^2 - R'0^2| / R^2 (< 0.1)
+    tropsha_r2_diff: float  # |r^2 - R0^2| / r^2 (< 0.1), r^2 = squared Pearson
+    tropsha_r2_prime_diff: float  # |r^2 - R'0^2| / r^2 (< 0.1)
     r_m_2: float
     r_m_prime_2: float
     r_m_average: float  # (r_m^2 + r'_m^2)/2 > 0.5
     delta_r_m_2: float  # |r_m^2 - r'_m^2| < 0.2
+    r0_diff: float  # |R0^2 - R'0^2| < 0.3
     tropsha_passed: bool
     status: str  # 'PASS', 'WARNING', 'FAIL'
     diagnostic_message: str
@@ -38,7 +40,8 @@ def calculate_oecd_metrics(
     y_pred: np.ndarray,
     y_train_mean: Optional[float] = None,
     min_pass_q2: float = 0.60,
-    min_warn_q2: float = 0.50
+    min_warn_q2: float = 0.50,
+    y_train: Optional[np.ndarray] = None
 ) -> OECDValidationResult:
     """
     Computes all standard OECD & Tropsha-Golbraikh QSAR validation metrics.
@@ -50,7 +53,16 @@ def calculate_oecd_metrics(
     y_pred : np.ndarray
         Model predicted values.
     y_train_mean : float, optional
-        Mean of the training set (used for exact Q2_ext / Q2_F1 computation).
+        Mean of the training set (used for Q2_F1). Taken from y_train when that is given.
+    y_train : np.ndarray, optional
+        Training responses. Needed for Q2_F1 (training mean) and Q2_F3 (training variance);
+        without it Q2_F1 falls back to the evaluation mean (= Q2_F2) and Q2_F3 is NaN.
+
+    Notes
+    -----
+    Definitions follow Consonni, Ballabio & Todeschini (2009) for Q2_F1/F2/F3, Lin (1989) for
+    CCC, Golbraikh & Tropsha (2002) and Roy et al. (2012) for the regression-through-origin
+    criteria, where r^2 is the squared Pearson correlation between observed and predicted values.
     min_pass_q2 : float, default 0.60
     min_warn_q2 : float, default 0.50
 
@@ -67,7 +79,11 @@ def calculate_oecd_metrics(
 
     mean_t = float(np.mean(y_t))
     mean_p = float(np.mean(y_p))
-    mean_tr = float(y_train_mean) if y_train_mean is not None else mean_t
+    y_tr = np.asarray(y_train, dtype=float) if y_train is not None else None
+    if y_tr is not None and len(y_tr) > 1:
+        mean_tr = float(np.mean(y_tr))
+    else:
+        mean_tr = float(y_train_mean) if y_train_mean is not None else mean_t
 
     ss_res = float(np.sum((y_t - y_p)**2))
     ss_tot = float(np.sum((y_t - mean_t)**2))
@@ -80,8 +96,10 @@ def calculate_oecd_metrics(
     # 2. Q2_F1, Q2_F2, Q2_F3
     q2_f1 = q2_ext
     q2_f2 = 1.0 - (ss_res / float(np.sum((y_t - mean_t)**2))) if ss_tot > 0 else 0.0
-    var_tr = float(np.var(y_t))  # approx if y_train_var not passed
-    q2_f3 = 1.0 - ((ss_res / n) / max(1e-6, var_tr))
+    if y_tr is not None and len(y_tr) > 1 and float(np.var(y_tr)) > 0:
+        q2_f3 = 1.0 - ((ss_res / n) / float(np.mean((y_tr - np.mean(y_tr)) ** 2)))
+    else:
+        q2_f3 = float("nan")   # requires the training variance; the evaluation variance would give Q2_F2
 
     # 3. MAE & RMSE
     mae = float(np.mean(np.abs(y_t - y_p)))
@@ -111,25 +129,27 @@ def calculate_oecd_metrics(
     r0_2 = 1.0 - (ss_r0 / ss_tot) if ss_tot > 0 else 0.0
     r0_prime_2 = 1.0 - (ss_r0_prime / float(np.sum((y_p - mean_p)**2))) if float(np.sum((y_p - mean_p)**2)) > 0 else 0.0
 
-    # 7. Tropsha differences
-    diff_r0 = abs(r2 - r0_2) / max(1e-6, abs(r2)) if abs(r2) > 0 else 0.0
-    diff_r0_prime = abs(r2 - r0_prime_2) / max(1e-6, abs(r2)) if abs(r2) > 0 else 0.0
+    # 7. Squared Pearson correlation and Tropsha differences
+    sd_t, sd_p = float(np.std(y_t)), float(np.std(y_p))
+    r2_pearson = float((cov_tp / (sd_t * sd_p)) ** 2) if sd_t > 0 and sd_p > 0 else 0.0
+    diff_r0 = abs(r2_pearson - r0_2) / r2_pearson if r2_pearson > 0 else float("inf")
+    diff_r0_prime = abs(r2_pearson - r0_prime_2) / r2_pearson if r2_pearson > 0 else float("inf")
+    r0_diff = abs(r0_2 - r0_prime_2)
 
-    # 8. Modified Roy r_m^2 metrics
-    r_val = np.sqrt(max(0.0, r2))
-    term1 = np.sqrt(max(0.0, abs(r2 - r0_2)))
-    term2 = np.sqrt(max(0.0, abs(r2 - r0_prime_2)))
-    
-    r_m_2 = float(r2 * (1.0 - term1))
-    r_m_prime_2 = float(r2 * (1.0 - term2))
+    # 8. Roy r_m^2 metrics (with r^2 = squared Pearson correlation)
+    term1 = np.sqrt(abs(r2_pearson - r0_2))
+    term2 = np.sqrt(abs(r2_pearson - r0_prime_2))
+
+    r_m_2 = float(r2_pearson * (1.0 - term1))
+    r_m_prime_2 = float(r2_pearson * (1.0 - term2))
     r_m_avg = float((r_m_2 + r_m_prime_2) / 2.0)
     delta_r_m_2 = float(abs(r_m_2 - r_m_prime_2))
 
     # 9. Tropsha acceptance evaluation
     c1 = (q2_ext > min_warn_q2)
-    c2 = (r2 > min_warn_q2)
+    c2 = (r2_pearson > 0.60)                     # Golbraikh & Tropsha: r^2 > 0.6
     c3 = (0.85 <= k <= 1.15) or (0.85 <= k_prime <= 1.15)
-    c4 = (diff_r0 < 0.10) or (diff_r0_prime < 0.10)
+    c4 = ((diff_r0 < 0.10) or (diff_r0_prime < 0.10)) and (r0_diff < 0.30)
     c5 = (delta_r_m_2 < 0.20) and (r_m_avg > min_warn_q2)
     c6 = (ccc >= 0.80)
 
@@ -138,10 +158,12 @@ def calculate_oecd_metrics(
     failed_criteria = []
     if not c1:
         failed_criteria.append(f"Q^2_ext = {q2_ext:.2f} <= {min_warn_q2}")
+    if not c2:
+        failed_criteria.append(f"r^2 = {r2_pearson:.2f} <= 0.60")
     if not c3:
         failed_criteria.append(f"Slope k = {k:.2f} out of [0.85, 1.15]")
     if not c4:
-        failed_criteria.append(f"|R^2 - R0^2|/R^2 = {diff_r0:.2f} >= 0.10")
+        failed_criteria.append(f"|r^2 - R0^2|/r^2 = {diff_r0:.2f} (>= 0.10) or |R0^2 - R'0^2| = {r0_diff:.2f} (>= 0.30)")
     if not c5:
         failed_criteria.append(f"r_m^2 avg = {r_m_avg:.2f} <= 0.50 or delta_r_m = {delta_r_m_2:.2f} >= 0.20")
     if not c6:
@@ -162,6 +184,7 @@ def calculate_oecd_metrics(
     return OECDValidationResult(
         n_samples=n,
         r2=r2,
+        r2_pearson=r2_pearson,
         q2_ext=q2_ext,
         q2_f1=q2_f1,
         q2_f2=q2_f2,
@@ -179,6 +202,7 @@ def calculate_oecd_metrics(
         r_m_prime_2=r_m_prime_2,
         r_m_average=r_m_avg,
         delta_r_m_2=delta_r_m_2,
+        r0_diff=r0_diff,
         tropsha_passed=tropsha_passed,
         status=status,
         diagnostic_message=diag

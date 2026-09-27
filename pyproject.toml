@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qsarcert"
-version = "1.0.0"
+version = "1.1.0"
 description = "Automated OECD Validation Principles, Applicability Domain (Williams Plot), Y-Randomization, and Scaffold Leakage Certification for QSAR & Molecular ML Models"
 readme = "README.md"
 authors = [

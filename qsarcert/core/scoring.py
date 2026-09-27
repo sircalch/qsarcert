@@ -66,7 +66,7 @@ def assess_qsar_quality(
     recommendations = []
 
     # 1. OECD Principle 4: Goodness-of-fit & External Predictivity
-    oecd_res = calculate_oecd_metrics(y_true, y_pred)
+    oecd_res = calculate_oecd_metrics(y_true, y_pred, y_train=y_train)
     statuses.append(oecd_res.status)
     if oecd_res.status != "PASS":
         recommendations.append(oecd_res.diagnostic_message)
