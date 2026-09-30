@@ -1,8 +1,13 @@
 """
 Applicability Domain (AD) assessment, Hat matrix leverage, and Williams Plot.
+
+The domain is structural: a compound is inside it when its leverage does not exceed the warning
+leverage h* = 3(p + 1)/n (Gramatica 2007). Residuals do not decide membership, since the domain
+must be defined for compounds whose response is unknown; they are used only to label response
+outliers on the Williams plot.
 """
 
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Optional
 from dataclasses import dataclass
 import numpy as np
 
@@ -12,7 +17,7 @@ class CompoundADClassification:
     index: int
     leverage: float
     standardized_residual: float
-    category: str  # 'IN_DOMAIN', 'HIGH_LEVERAGE_ACCURATE', 'RESPONSE_OUTLIER', 'INFLUENTIAL_OUTLIER'
+    category: str  # 'IN_DOMAIN', 'HIGH_LEVERAGE' (outside, accurate), 'RESPONSE_OUTLIER', 'INFLUENTIAL_OUTLIER'
     is_in_domain: bool
 
 
@@ -27,12 +32,26 @@ class ApplicabilityDomainResult:
     leverages: List[float]
     standardized_residuals: List[float]
     classifications: List[CompoundADClassification]
-    pct_in_domain: float
+    pct_in_domain: float  # percentage with h <= h*
     n_influential_outliers: int
     n_response_outliers: int
     n_high_leverage_accurate: int
-    status: str  # 'PASS', 'WARNING', 'FAIL'
+    status: str  # 'PASS', 'WARNING', 'FAIL', 'NOT_APPLICABLE'
     diagnostic_message: str
+    design_rank: int = 0  # rank of the centred training design matrix (with intercept)
+    residual_scale: float = float("nan")  # s used to standardise residuals
+    residual_scale_source: str = ""  # 'training' or 'evaluation (robust)'
+
+
+def _thin_svd(x):
+    """Singular values and right singular vectors; falls back to the slower but more robust LAPACK
+    driver gesvd when the default divide-and-conquer driver does not converge."""
+    try:
+        _, sv, vt = np.linalg.svd(x, full_matrices=False)
+    except np.linalg.LinAlgError:
+        from scipy.linalg import svd
+        _, sv, vt = svd(x, full_matrices=False, lapack_driver="gesvd")
+    return sv, vt
 
 
 def calculate_applicability_domain(
@@ -46,29 +65,31 @@ def calculate_applicability_domain(
     min_warn_pct_in_domain: float = 70.0
 ) -> ApplicabilityDomainResult:
     """
-    Computes Hat matrix leverage h_i, warning threshold h*, standardized residuals,
-    and Williams Plot domain classifications.
+    Computes leverages h_i = x_i (X^T X)^+ x_i^T of the evaluated compounds with respect to the
+    training design (standardised descriptors plus intercept), the warning leverage h*, standardised
+    residuals and the Williams plot categories.
 
     Parameters
     ----------
-    x_train : np.ndarray
-        Training feature matrix (n_train, p_features).
-    x_eval : np.ndarray
-        Evaluated / test feature matrix (n_eval, p_features).
-    y_true : np.ndarray
-        True observed response values for evaluated set.
-    y_pred : np.ndarray
-        Model predicted response values for evaluated set.
+    x_train, x_eval : np.ndarray
+        Descriptor matrices (n, p) used by the model.
+    y_true, y_pred : np.ndarray
+        Observed and predicted responses of the evaluated compounds (Williams plot only).
     y_train_residuals : np.ndarray, optional
-        Residuals from training set (y_train - y_train_pred) to calculate reference s.
+        Training residuals. Their standard deviation (n - p - 1 degrees of freedom) is the residual
+        scale s, as in the Williams plot. Without them a robust scale of the evaluated residuals is
+        used and reported as such.
     residual_threshold : float, default 3.0
-        Standardized residual cutoff (+-3 sigma).
-    min_pass_pct_in_domain : float, default 85.0%
-    min_warn_pct_in_domain : float, default 70.0%
+    min_pass_pct_in_domain, min_warn_pct_in_domain : float
+        Coverage (percentage with h <= h*) for PASS and WARNING.
 
-    Returns
-    -------
-    result : ApplicabilityDomainResult
+    Notes
+    -----
+    Leverage bounds the domain only when the design has many more compounds than descriptors.
+    When h* >= 1 (3(p + 1) >= n) every training compound is below h* by construction (training
+    leverages cannot exceed 1), the threshold no longer describes the training data and the status is
+    NOT_APPLICABLE; reduce the descriptors (e.g. to those of the model or to principal components)
+    or use a distance-based domain.
     """
     x_tr = np.asarray(x_train, dtype=float)
     x_ev = np.asarray(x_eval, dtype=float)
@@ -78,113 +99,77 @@ def calculate_applicability_domain(
     n_tr, p = x_tr.shape
     n_ev = len(y_t)
 
-    # Standardize / center features based on training set statistics
     tr_mean = np.mean(x_tr, axis=0)
     tr_std = np.std(x_tr, axis=0)
-    tr_std[tr_std == 0] = 1.0  # Avoid division by zero
+    tr_std[tr_std == 0] = 1.0
+    x_tr_aug = np.hstack([np.ones((n_tr, 1)), (x_tr - tr_mean) / tr_std])
+    x_ev_aug = np.hstack([np.ones((n_ev, 1)), (x_ev - tr_mean) / tr_std])
 
-    x_tr_norm = (x_tr - tr_mean) / tr_std
-    x_ev_norm = (x_ev - tr_mean) / tr_std
+    # Leverage from the thin SVD of the design, X = U S V^T: (X^T X)^+ = V S^-2 V^T over the non-zero
+    # singular values. Working on X rather than X^T X avoids squaring its condition number.
+    sv, vt = _thin_svd(x_tr_aug)
+    tol = sv.max() * max(x_tr_aug.shape) * np.finfo(float).eps if sv.size else 0.0
+    keep = sv > tol
+    rank = int(keep.sum())
+    z = (x_ev_aug @ vt[keep].T) / sv[keep]
+    leverages = np.sum(z ** 2, axis=1)
+    # h* = 3(p + 1)/n, with p + 1 replaced by the rank of the design when descriptors are collinear
+    # (the mean training leverage is rank/n, so h* stays three times the mean).
+    h_star = float(3.0 * rank / max(1, n_tr))
 
-    # Add intercept column (ones)
-    x_tr_aug = np.hstack([np.ones((n_tr, 1)), x_tr_norm])
-    x_ev_aug = np.hstack([np.ones((n_ev, 1)), x_ev_norm])
-
-    # Warning leverage: h* = 3(p + 1)/n
-    p_eff = p
-    h_star = float(3.0 * (p_eff + 1) / max(1, n_tr))
-
-    # Hat matrix kernel: (X_tr^T X_tr)^{-1}
-    xtx = x_tr_aug.T @ x_tr_aug
-    try:
-        inv_xtx = np.linalg.pinv(xtx)
-    except Exception:
-        inv_xtx = np.linalg.inv(xtx + 1e-4 * np.eye(xtx.shape[0]))
-
-    # Compute leverages for evaluated set: h_i = diag(X_ev (X_tr^T X_tr)^{-1} X_ev^T)
-    leverages = np.einsum('ij,jk,ik->i', x_ev_aug, inv_xtx, x_ev_aug)
-    leverages = np.clip(leverages, 0.0, 10.0)
-
-    # Raw residuals
     residuals = y_t - y_p
-
-    # Reference standard deviation s
-    if y_train_residuals is not None and len(y_train_residuals) > 0:
-        s_ref = float(np.std(y_train_residuals, ddof=1))
+    if y_train_residuals is not None and len(y_train_residuals) > p + 1:
+        r_tr = np.asarray(y_train_residuals, dtype=float)
+        s_ref = float(np.sqrt(np.sum(r_tr ** 2) / (len(r_tr) - p - 1)))
+        s_src = "training"
     else:
-        median_res = np.median(np.abs(residuals))
-        s_ref = float(1.4826 * median_res) if median_res > 1e-4 else float(np.std(residuals, ddof=1))
-        
-    if s_ref < 1e-6:
-        s_ref = float(np.std(residuals)) if np.std(residuals) > 1e-6 else 1.0
+        s_ref = float(1.4826 * np.median(np.abs(residuals - np.median(residuals))))
+        s_src = "evaluation (robust)"
+    if not np.isfinite(s_ref) or s_ref < 1e-12:
+        s_ref = float(np.std(residuals)) if np.std(residuals) > 1e-12 else 1.0
 
-    # Standardized studentized residuals
-    std_residuals = []
-    for idx in range(n_ev):
-        e_i = residuals[idx]
-        h_i = leverages[idx]
-        if h_i < 0.99:
-            denom_i = s_ref * np.sqrt(max(1e-4, 1.0 - h_i))
-        else:
-            denom_i = s_ref
-        std_residuals.append(float(e_i / denom_i))
-
-    std_residuals = np.asarray(std_residuals)
+    # Williams plot convention: residual scaled by s sqrt(1 - h); for extrapolated compounds (h >= 1)
+    # the prediction variance exceeds s^2 and the residual is scaled by s alone.
+    denom = s_ref * np.sqrt(np.clip(1.0 - leverages, 1e-12, None))
+    denom = np.where(leverages < 1.0, denom, s_ref)
+    std_residuals = residuals / denom
 
     classifications = []
-    n_in_domain = 0
-    n_high_lev_acc = 0
-    n_resp_outliers = 0
-    n_influential = 0
-
+    counts = {"IN_DOMAIN": 0, "HIGH_LEVERAGE": 0, "RESPONSE_OUTLIER": 0, "INFLUENTIAL_OUTLIER": 0}
     for idx in range(n_ev):
         h = float(leverages[idx])
         res = float(std_residuals[idx])
+        high_lev = h > h_star
+        high_res = abs(res) > residual_threshold
+        cat = ("INFLUENTIAL_OUTLIER" if high_res else "HIGH_LEVERAGE") if high_lev else \
+              ("RESPONSE_OUTLIER" if high_res else "IN_DOMAIN")
+        counts[cat] += 1
+        classifications.append(CompoundADClassification(index=idx, leverage=h, standardized_residual=res,
+                                                        category=cat, is_in_domain=not high_lev))
 
-        is_high_lev = (h > h_star)
-        is_high_res = (abs(res) > residual_threshold)
+    n_in = counts["IN_DOMAIN"] + counts["RESPONSE_OUTLIER"]
+    pct_in_domain = float(100.0 * n_in / max(1, n_ev))
+    max_lev = float(np.max(leverages)) if n_ev else 0.0
+    mean_lev = float(np.mean(leverages)) if n_ev else 0.0
+    extra = (f" {counts['INFLUENTIAL_OUTLIER']} compound(s) outside the domain are also badly predicted"
+             f" (|residual| > {residual_threshold:g} s).") if counts["INFLUENTIAL_OUTLIER"] else ""
 
-        if not is_high_lev and not is_high_res:
-            cat = "IN_DOMAIN"
-            in_dom = True
-            n_in_domain += 1
-        elif is_high_lev and not is_high_res:
-            cat = "HIGH_LEVERAGE_ACCURATE"
-            in_dom = True  # Extrapolation with accurate prediction
-            n_high_lev_acc += 1
-        elif not is_high_lev and is_high_res:
-            cat = "RESPONSE_OUTLIER"
-            in_dom = False
-            n_resp_outliers += 1
-        else:
-            cat = "INFLUENTIAL_OUTLIER"
-            in_dom = False
-            n_influential += 1
-
-        classifications.append(CompoundADClassification(
-            index=idx,
-            leverage=h,
-            standardized_residual=res,
-            category=cat,
-            is_in_domain=in_dom
-        ))
-
-    pct_in_domain = float(100.0 * (n_in_domain + n_high_lev_acc) / max(1, n_ev))
-    max_lev = float(np.max(leverages)) if len(leverages) > 0 else 0.0
-    mean_lev = float(np.mean(leverages)) if len(leverages) > 0 else 0.0
-
-    if n_influential > 0:
-        status = "FAIL"
-        diag = f"Applicability Domain violation: {n_influential} influential outlier(s) detected (h > {h_star:.3f}, |residual| > 3.0). Predictions outside domain are inaccurate."
+    if h_star >= 1.0:
+        status = "NOT_APPLICABLE"
+        diag = (f"Leverage cannot bound the domain: h* = {h_star:.2f} >= 1 with p = {p} descriptors (design rank {rank})"
+                f" and n = {n_tr} training compounds. Use the model's own descriptors, principal components"
+                f" or a distance-based domain.")
     elif pct_in_domain >= min_pass_pct_in_domain:
         status = "PASS"
-        diag = f"High Applicability Domain coverage ({pct_in_domain:.1f}% in domain >= {min_pass_pct_in_domain:.1f}%). No influential outliers detected (h* = {h_star:.3f})."
+        diag = f"{pct_in_domain:.1f}% of the compounds lie inside the leverage domain (h <= h* = {h_star:.3f})." + extra
     elif pct_in_domain >= min_warn_pct_in_domain:
         status = "WARNING"
-        diag = f"Moderate Applicability Domain coverage ({pct_in_domain:.1f}% in domain). Detected {n_resp_outliers} response outlier(s)."
+        diag = (f"{pct_in_domain:.1f}% of the compounds lie inside the leverage domain (h* = {h_star:.3f});"
+                f" predictions for the rest are extrapolations." + extra)
     else:
         status = "FAIL"
-        diag = f"Poor Applicability Domain coverage ({pct_in_domain:.1f}% < {min_warn_pct_in_domain:.1f}%)."
+        diag = (f"Only {pct_in_domain:.1f}% of the compounds lie inside the leverage domain (h* = {h_star:.3f});"
+                f" most predictions are extrapolations." + extra)
 
     return ApplicabilityDomainResult(
         n_train_samples=n_tr,
@@ -197,9 +182,12 @@ def calculate_applicability_domain(
         standardized_residuals=std_residuals.tolist(),
         classifications=classifications,
         pct_in_domain=pct_in_domain,
-        n_influential_outliers=n_influential,
-        n_response_outliers=n_resp_outliers,
-        n_high_leverage_accurate=n_high_lev_acc,
+        n_influential_outliers=counts["INFLUENTIAL_OUTLIER"],
+        n_response_outliers=counts["RESPONSE_OUTLIER"],
+        n_high_leverage_accurate=counts["HIGH_LEVERAGE"],
         status=status,
-        diagnostic_message=diag
+        diagnostic_message=diag,
+        design_rank=rank,
+        residual_scale=s_ref,
+        residual_scale_source=s_src,
     )

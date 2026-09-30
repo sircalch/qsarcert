@@ -63,7 +63,7 @@ def generate_qsar_figures(
         for c in ad.classifications:
             if c.category == "IN_DOMAIN":
                 colors.append("#0284c7")  # Blue
-            elif c.category == "HIGH_LEVERAGE_ACCURATE":
+            elif c.category in ("HIGH_LEVERAGE", "HIGH_LEVERAGE_ACCURATE"):
                 colors.append("#16a34a")  # Green
             elif c.category == "RESPONSE_OUTLIER":
                 colors.append("#f59e0b")  # Yellow/Orange
@@ -134,7 +134,7 @@ def generate_qsar_figures(
         plt.close()
 
     # 3. Y-Randomization Scrambled R^2 Distribution Histogram
-    if report.y_randomization is not None:
+    if report.y_randomization is not None and report.y_randomization.scrambled_r2_distribution:
         yr = report.y_randomization
         scrambled_arr = np.asarray(yr.scrambled_r2_distribution)
 
@@ -144,7 +144,7 @@ def generate_qsar_figures(
         ax.axvline(yr.mean_scrambled_r2, color="#f59e0b", linestyle="-", linewidth=2.0, label=rf"Mean Scrambled $\bar{{R}}^2_r = {yr.mean_scrambled_r2:.3f}$")
         ax.axvline(yr.original_r2, color="#0284c7", linestyle="--", linewidth=2.5, label=rf"Original Model $R^2 = {yr.original_r2:.3f}$")
 
-        ax.set_xlim(0.0, 1.0)
+        ax.set_xlim(min(0.0, float(np.min(scrambled_arr)), yr.original_r2) - 0.02, 1.0)
         ax.set_xlabel(r"Coefficient of Determination ($R^2$)")
         ax.set_ylabel("Frequency")
         ax.set_title(rf"Y-Randomization Test — $cR^2_p = {yr.cr2_p:.3f}$ (Threshold: $>0.50$)")

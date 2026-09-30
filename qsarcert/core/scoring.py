@@ -36,7 +36,11 @@ def assess_qsar_quality(
     x_eval: Optional[np.ndarray] = None,
     y_train: Optional[np.ndarray] = None,
     run_y_scrambling: bool = True,
-    n_scrambling_iterations: int = 100
+    n_scrambling_iterations: int = 100,
+    y_train_pred: Optional[np.ndarray] = None,
+    estimator: Any = None,
+    smiles_train: Optional[List[str]] = None,
+    smiles_eval: Optional[List[str]] = None
 ) -> QSARValidationReport:
     """
     Evaluates QSAR & Molecular ML model against OECD Validation Principles.
@@ -57,6 +61,13 @@ def assess_qsar_quality(
         Training target vector for Y-randomization.
     run_y_scrambling : bool, default True
     n_scrambling_iterations : int, default 100
+    y_train_pred : np.ndarray, optional
+        Training predictions; the training residuals give the residual scale of the Williams plot.
+    estimator : object with fit/predict, optional
+        The model, refitted on permuted responses for Y-randomization (cross-validated R^2).
+        Without it an OLS surrogate is used, which is valid only for few descriptors.
+    smiles_train, smiles_eval : list of str, optional
+        Structures for the duplicate-structure and scaffold checks (requires RDKit).
 
     Returns
     -------
@@ -74,43 +85,41 @@ def assess_qsar_quality(
     # 2. OECD Principle 3: Applicability Domain (Williams Plot)
     ad_res = None
     if x_train is not None and x_eval is not None:
-        ad_res = calculate_applicability_domain(x_train, x_eval, y_true, y_pred)
-        statuses.append(ad_res.status)
+        train_res = None
+        if y_train is not None and y_train_pred is not None:
+            train_res = np.asarray(y_train, dtype=float) - np.asarray(y_train_pred, dtype=float)
+        ad_res = calculate_applicability_domain(x_train, x_eval, y_true, y_pred, y_train_residuals=train_res)
+        if ad_res.status != "NOT_APPLICABLE":
+            statuses.append(ad_res.status)
         if ad_res.status != "PASS":
             recommendations.append(ad_res.diagnostic_message)
 
     # 3. OECD Principle 4: Robustness against chance correlation (Y-randomization)
     y_rand_res = None
     if run_y_scrambling:
-        # Determine appropriate feature matrix and response vector with matching lengths
+        # Y-randomization tests the training data: the responses the model was fitted to.
         if x_train is not None and y_train is not None and len(x_train) == len(y_train):
-            x_for_rand = x_train
-            y_for_rand = y_train
-        elif x_eval is not None and len(x_eval) == len(y_true):
-            x_for_rand = x_eval
-            y_for_rand = y_true
-        elif x_train is not None and len(x_train) == len(y_true):
-            x_for_rand = x_train
-            y_for_rand = y_true
+            x_for_rand, y_for_rand = x_train, y_train
         else:
-            x_for_rand = None
-            y_for_rand = None
+            x_for_rand, y_for_rand = None, None
+            recommendations.append("Y-randomization skipped: it needs the training descriptors and responses.")
 
         if x_for_rand is not None and y_for_rand is not None:
             y_rand_res = perform_y_randomization(
                 x_for_rand,
                 y_for_rand,
-                original_r2=oecd_res.r2,
-                n_iterations=n_scrambling_iterations
+                n_iterations=n_scrambling_iterations,
+                estimator=estimator
             )
-            statuses.append(y_rand_res.status)
+            if y_rand_res.status != "NOT_APPLICABLE":
+                statuses.append(y_rand_res.status)
             if y_rand_res.status != "PASS":
                 recommendations.append(y_rand_res.diagnostic_message)
 
     # 4. Split Leakage Check
     leakage_res = None
     if x_train is not None and x_eval is not None:
-        leakage_res = check_split_leakage(x_train, x_eval)
+        leakage_res = check_split_leakage(x_train, x_eval, smiles_train=smiles_train, smiles_test=smiles_eval)
         statuses.append(leakage_res.status)
         if leakage_res.status != "PASS":
             recommendations.append(leakage_res.diagnostic_message)
@@ -118,13 +127,13 @@ def assess_qsar_quality(
     # Overall Decision
     if "FAIL" in statuses:
         overall_status = "FAIL"
-        validation_score = "QSAR MODEL VALIDATION = FAILED / NON-COMPLIANT"
+        validation_score = "NUMERICAL CHECKS (OECD PRINCIPLES 3-4) = AT LEAST ONE FAILED"
     elif "WARNING" in statuses:
         overall_status = "WARNING"
-        validation_score = "QSAR MODEL VALIDATION = COMPLIANT WITH WARNINGS"
+        validation_score = "NUMERICAL CHECKS (OECD PRINCIPLES 3-4) = PASSED WITH WARNINGS"
     else:
         overall_status = "PASS"
-        validation_score = "QSAR MODEL VALIDATION = FULLY OECD COMPLIANT (HIGH CONFIDENCE)"
+        validation_score = "NUMERICAL CHECKS (OECD PRINCIPLES 3-4) = ALL PASSED"
 
     return QSARValidationReport(
         overall_status=overall_status,
@@ -137,7 +146,7 @@ def assess_qsar_quality(
         recommendations=recommendations,
         provenance={
             "tool": "QSARCert",
-            "version": "1.0.0",
+            "version": __import__("qsarcert").__version__,
             "citation": "Monreal-Hernández, A. (2026). QSARCert: An Open-Source Toolkit for OECD Validation Principles, Applicability Domain Assessment, Y-Randomization, and Reproducibility Certification of QSAR and Molecular Machine Learning Models."
         }
     )

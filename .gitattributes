@@ -1,0 +1,2 @@
+validation/data/*.csv -text
+validation/data/SHA256SUMS -text

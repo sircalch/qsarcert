@@ -6,7 +6,7 @@ authors:
     orcid: "https://orcid.org/0009-0009-1207-8597"
     affiliation: "Universidad Estatal de Sonora"
 title: "QSARCert: An Open-Source Toolkit for OECD Validation Principles, Applicability Domain Assessment, Y-Randomization, and Reproducibility Certification of QSAR and Molecular Machine Learning Models"
-version: "1.1.0"
+version: "1.2.0"
 doi: 10.5281/zenodo.22217582
 date-released: 2026-08-31
 url: "https://github.com/sircalch/qsarcert"

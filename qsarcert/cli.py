@@ -34,16 +34,16 @@ def print_banner():
 
 def run_demo(output_dir: str = "qsarcert_demo_output"):
     """
-    Executes a benchmark demonstration evaluating a Random Forest QSAR model (pIC50 prediction)
+    Runs a demonstration on synthetic data (a noisy linear response)
     with 120 compounds (100 train, 20 test), computing Williams plot, Tropsha metrics, and Y-randomization.
     """
-    print(f"\n[QSARCert] Running demonstration benchmark on QSAR Model (Kinase pIC50)...")
+    print(f"\n[QSARCert] Running a demonstration on synthetic data...")
     os.makedirs(output_dir, exist_ok=True)
 
     metadata = {
         "endpoint": "SYNTHETIC DEMO DATA - pIC50 (Kinase Inhibition)",
-        "algorithm": "Random Forest Regressor (100 trees)",
-        "descriptors": "RDKit 2D PhysChem Descriptors (p=8)"
+        "algorithm": "synthetic linear model with noise (no real model is fitted)",
+        "descriptors": "8 synthetic Gaussian descriptors"
     }
 
     # Generate synthetic training & test sets
@@ -76,6 +76,7 @@ def run_demo(output_dir: str = "qsarcert_demo_output"):
         y_pred=y_pred_test,
         x_train=x_train,
         x_eval=x_test,
+        y_train=y_train,
         run_y_scrambling=True,
         n_scrambling_iterations=100
     )
@@ -105,7 +106,7 @@ def run_demo(output_dir: str = "qsarcert_demo_output"):
     if report.applicability_domain:
         print(f" * App. Domain     : {report.applicability_domain.pct_in_domain:.1f}% In-Domain (h* = {report.applicability_domain.warning_leverage:.3f}) | Status: {report.applicability_domain.status}")
     if report.y_randomization:
-        print(f" * Y-Randomization : cR^2_p = {report.y_randomization.cr2_p:.3f} > 0.50 (Scrambled R^2 = {report.y_randomization.mean_scrambled_r2:.3f}) | Status: {report.y_randomization.status}")
+        print(f" * Y-Randomization : cR^2_p = {report.y_randomization.cr2_p:.3f} (Scrambled R^2 = {report.y_randomization.mean_scrambled_r2:.3f}) | Status: {report.y_randomization.status}")
     print("="*70)
     print(f"\nAll outputs successfully saved to: {os.path.abspath(output_dir)}/")
     print(f"Open {os.path.abspath(html_p)} in your browser to inspect the full report.\n")
@@ -123,15 +124,21 @@ def run_assess(args):
 
     x_tr = None
     x_ev = None
-    if "x_train" in data and data["x_train"] is not None:
+    y_tr = y_tr_pred = smi_tr = smi_ev = None
+    if "y_eval" in data:  # file with a train/test split column
         x_tr = data["x_train"]
         x_ev = data["x_eval"]
         y_true = data["y_eval"]
         y_pred = data["y_eval_pred"]
+        y_tr = data["y_train"]
+        y_tr_pred = data["y_train_pred"]
+        smi_tr, smi_ev = data.get("smiles_train"), data.get("smiles_eval")
     else:
         y_true = data["y_true"]
         y_pred = data["y_pred"]
-        if "x_features" in data and data["x_features"] is not None:
+        if data.get("x_features") is not None:
+            print("  -> No split column: the applicability domain is computed against the evaluated compounds"
+                  " themselves, and Y-randomization is skipped.")
             x_tr = data["x_features"]
             x_ev = data["x_features"]
 
@@ -154,6 +161,10 @@ def run_assess(args):
         y_pred=y_pred,
         x_train=x_tr,
         x_eval=x_ev,
+        y_train=y_tr,
+        y_train_pred=y_tr_pred,
+        smiles_train=smi_tr,
+        smiles_eval=smi_ev,
         run_y_scrambling=not args.no_scrambling,
         n_scrambling_iterations=int(args.scrambling_runs)
     )
@@ -195,7 +206,7 @@ def print_citation():
 }"""
     print("\nIf you use QSARCert in your publications, please cite:\n")
     print("APA Style:")
-    print("Monreal-Hernández, A. (2026). QSARCert: An Open-Source Toolkit for OECD Validation Principles, Applicability Domain Assessment, Y-Randomization, and Reproducibility Certification of QSAR and Molecular Machine Learning Models (v1.0.0). Zenodo. https://github.com/sircalch/qsarcert\n")
+    print(f"Monreal-Hernández, A. (2026). QSARCert: An Open-Source Toolkit for OECD Validation Principles, Applicability Domain Assessment, Y-Randomization, and Reproducibility Certification of QSAR and Molecular Machine Learning Models (v{__import__('qsarcert').__version__}). Zenodo. https://github.com/sircalch/qsarcert\n")
     print("BibTeX:")
     print(bib)
     print()
@@ -222,7 +233,7 @@ def main():
     assess_parser.add_argument("--scrambling-runs", default=100, help="Number of Y-randomization runs (default: 100)")
 
     # Demo command
-    demo_parser = subparsers.add_parser("demo", help="Run benchmark demonstration (Kinase pIC50 QSAR model + Williams plot)")
+    demo_parser = subparsers.add_parser("demo", help="Run a demonstration on synthetic data (Williams plot, metrics, Y-randomization)")
     demo_parser.add_argument("-o", "--output", default="qsarcert_demo_output", help="Output directory (default: qsarcert_demo_output)")
 
     # Cite command

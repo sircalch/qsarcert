@@ -39,3 +39,8 @@ coverage.xml
 qsarcert_output/
 qsarcert_demo_output/
 *.log
+
+# validation: regenerable intermediates (run_models.py / benchmark.py)
+validation/results/runs/
+validation/results/bench_cache/
+validation/results/features/

@@ -61,6 +61,8 @@ def parse_predictions_csv(filepath: str) -> Dict[str, Any]:
                 "y_eval_pred": df.loc[ev_mask, "y_pred"].values,
                 "x_train": x_features[tr_mask] if x_features is not None else None,
                 "x_eval": x_features[ev_mask] if x_features is not None else None,
+                "smiles_train": df.loc[tr_mask, "smiles"].astype(str).tolist() if "smiles" in df.columns else None,
+                "smiles_eval": df.loc[ev_mask, "smiles"].astype(str).tolist() if "smiles" in df.columns else None,
                 "n_train": int(tr_mask.sum()),
                 "n_eval": int(ev_mask.sum())
             }

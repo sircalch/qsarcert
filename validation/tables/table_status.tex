@@ -1,0 +1,17 @@
+\begin{tabular}{llll}
+\toprule
+Check & model & version 1.1.0 & version 1.2 \\
+\midrule
+Applicability domain & MLR (6 descriptors) & pass 12, fail 48 & pass 59, warning 1 \\
+ & ridge (all descriptors) & fail 60 & pass 30, warning 10, fail 20 \\
+ & random forest (fingerprints) & pass 7, warning 3, fail 50 & not applicable 60 \\
+\addlinespace
+Y-randomization & MLR (6 descriptors) & pass 40, warning 20 & pass 40, warning 20 \\
+ & ridge (all descriptors) & pass 37, warning 23 & pass 37, warning 23 \\
+ & random forest (fingerprints) & warning 20, fail 40 & not applicable 60 \\
+\addlinespace
+Train/test leakage & MLR (6 descriptors) & fail 60 & pass 13, warning 32, fail 15 \\
+ & ridge (all descriptors) & fail 60 & pass 32, warning 18, fail 10 \\
+ & random forest (fingerprints) & pass 10, fail 50 & pass 10, warning 33, fail 17 \\
+\bottomrule
+\end{tabular}
