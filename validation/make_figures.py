@@ -127,19 +127,19 @@ def fig_ad(d):
     a.set_yticks([0.5, 1, 2, 4], ["0.5", "1", "2", "4"])
     a.minorticks_off()
     a.set_xticks(range(4), [f"{m if m == 'ridge' else 'MLR'}\n{s}" for m, s in groups])
-    a.set_ylabel("MAE outside / inside the leverage domain")
+    a.set_ylabel("MAE ratio, outside / inside domain")
     a.legend(loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=3)
     a.set_ylim(0.5, 5)
-    panel(a, "a")
+    panel(a, "a", -0.2)
 
     for m, c, mk in (("mlr", NEW, "o"), ("ridge", AUX, "s")):
         v = d[d.model == m]
         b.scatter(v.ad110_pct_in, v.ad_pct_in, s=10, marker=mk, color=c, lw=0, alpha=0.85, label=MODEL[m])
     b.plot([0, 100], [0, 100], color=INK2, lw=0.6, ls="--")
-    b.set(xlim=(0, 102), ylim=(0, 102), xlabel="compounds in domain, version 1.1.0 (%)",
-          ylabel="compounds with $h \\leq h^*$, version 1.2 (%)")
+    b.set(xlim=(0, 102), ylim=(0, 102), xlabel="in domain, version 1.1.0 (%)",
+          ylabel="in domain ($h \\leq h^*$), version 1.2 (%)")
     b.legend(loc="upper center", bbox_to_anchor=(0.5, -0.2), ncol=2)
-    panel(b, "b")
+    panel(b, "b", -0.2)
     fig.tight_layout(w_pad=2.5)
     save(fig, "fig3_ad")
 
