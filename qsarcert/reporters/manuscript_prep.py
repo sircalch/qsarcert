@@ -2,6 +2,7 @@
 Manuscript Methods snippet generator, summary tables, and BibTeX citations for QSARCert.
 """
 
+from qsarcert import __version__
 from typing import Dict, Any, Optional
 import os
 import pandas as pd
@@ -112,10 +113,10 @@ def generate_qsar_manuscript_assets(
     # 3. BibTeX Citation
     bib_path = os.path.join(output_dir, "citation.bib")
     bib_content = """@software{monreal2026qsarcert,
-  author = {Monreal-Hern\\'andez, Andre},
+  author = {Monreal-Hernández, Andrés},
   title = {{QSARCert: An Open-Source Toolkit for OECD Validation Principles, Applicability Domain Assessment, Y-Randomization, and Reproducibility Certification of QSAR and Molecular Machine Learning Models}},
   year = {2026},
-  version = {1.0.0},
+  version = {""" + __version__ + """},
   publisher = {Zenodo},
   url = {https://github.com/sircalch/qsarcert}
 }
