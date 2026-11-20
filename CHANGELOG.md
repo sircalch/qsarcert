@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Documentation site with installation, API reference and citation guidance: <https://sircalch.github.io/qsarcert/>.
+- Support and governance statement in `CONTRIBUTING.md`; `CODE_OF_CONDUCT.md` and `SECURITY.md`; README links to all of them.
+
+### Fixed
+- The "Changelog" project URL pointed to a `main` branch that does not exist; it now points to `master`.
+
 ## 1.2.0 (2026-09-30)
 
 Corrections found by applying QSARCert to 180 real models (MLR, ridge and random forests on ESOL,
