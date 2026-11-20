@@ -3,8 +3,8 @@ QSARCert: Automated OECD Validation Principles, Applicability Domain (Williams P
 Y-Randomization, and Scaffold Leakage Certification for QSAR & Molecular ML Models.
 """
 
-__version__ = "1.2.0"
-__author__ = "Andres Monreal-Hernández"
+__version__ = "1.2.1"
+__author__ = "Andrés Monreal-Hernández"
 __license__ = "MIT"
 
 from qsarcert.core.applicability_domain import (
